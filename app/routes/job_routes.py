@@ -29,3 +29,10 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
         "message": "Job created successfully",
         "job_id": new_job.id
     }
+
+@router.get("/jobs")
+def get_jobs(db: Session = Depends(get_db)):
+    
+    jobs = db.query(Job).all()
+
+    return jobs
