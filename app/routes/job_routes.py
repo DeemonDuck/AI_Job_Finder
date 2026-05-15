@@ -29,14 +29,32 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
     return new_job
 
 
-# Route to fetch all saved jobs
+# Route to fetch jobs with optional filters
 @router.get("/jobs", response_model=list[JobResponse])
-def get_jobs(db: Session = Depends(get_db)):
+def get_jobs(
+    company: str = None,
+    location: str = None,
+    skill: str = None,
+    db: Session = Depends(get_db)
+):
 
-    jobs = db.query(Job).all()
+    query = db.query(Job)
+
+    # Filter by company name
+    if company:
+        query = query.filter(Job.company.ilike(f"%{company}%"))
+
+    # Filter by location
+    if location:
+        query = query.filter(Job.location.ilike(f"%{location}%"))
+
+    # Filter by skills
+    if skill:
+        query = query.filter(Job.skills.ilike(f"%{skill}%"))
+
+    jobs = query.all()
 
     return jobs
-
 
 # Route to fetch a single job using its ID
 @router.get("/jobs/{job_id}", response_model=JobResponse)
