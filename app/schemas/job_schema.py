@@ -9,3 +9,9 @@ class JobCreate(BaseModel):
     job_url: str
     description: str
     skills: str
+
+class JobResponse(JobCreate):
+    id: int
+
+    class Config:
+        from_attributes = True
