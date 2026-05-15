@@ -36,3 +36,14 @@ def get_jobs(db: Session = Depends(get_db)):
     jobs = db.query(Job).all()
 
     return jobs
+
+
+@router.get("/jobs/{job_id}")
+def get_single_job(job_id: int, db: Session = Depends(get_db)):
+
+    job = db.query(Job).filter(Job.id == job_id).first()
+
+    if not job:
+        return {"error": "Job not found"}
+
+    return job
