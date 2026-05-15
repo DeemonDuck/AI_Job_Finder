@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text, DateTime
 from app.database import Base
+from datetime import datetime
 
 class Job(Base):
     __tablename__ = "jobs"
@@ -13,3 +14,5 @@ class Job(Base):
     job_url = Column(String)
     description = Column(Text)
     skills = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
