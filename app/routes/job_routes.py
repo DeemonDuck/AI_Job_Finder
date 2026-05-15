@@ -37,6 +37,8 @@ def get_jobs(
     location: str = None,
     skill: str = None,
     sort_by: str = "created_at",
+    skip: int = 0,
+    limit: int = 10,
     db: Session = Depends(get_db)
 ):
 
@@ -58,7 +60,7 @@ def get_jobs(
     if sort_by == "created_at":
         query = query.order_by(desc(Job.created_at))
 
-    jobs = query.all()
+    jobs = query.offset(skip).limit(limit).all()
 
     return jobs
 
