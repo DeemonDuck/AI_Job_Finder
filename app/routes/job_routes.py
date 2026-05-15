@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, desc
 
 from app.database import get_db
 from app.models.job import Job
@@ -30,18 +30,19 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
     return new_job
 
 
-# Route to fetch jobs with optional filters
+# Route to fetch jobs with filters and sorting
 @router.get("/jobs", response_model=list[JobResponse])
 def get_jobs(
     company: str = None,
     location: str = None,
     skill: str = None,
+    sort_by: str = "created_at",
     db: Session = Depends(get_db)
 ):
 
     query = db.query(Job)
 
-    # Filter by company name
+    # Filter by company
     if company:
         query = query.filter(Job.company.ilike(f"%{company}%"))
 
@@ -49,9 +50,13 @@ def get_jobs(
     if location:
         query = query.filter(Job.location.ilike(f"%{location}%"))
 
-    # Filter by skills
+    # Filter by skill
     if skill:
         query = query.filter(Job.skills.ilike(f"%{skill}%"))
+
+    # Sort newest first
+    if sort_by == "created_at":
+        query = query.order_by(desc(Job.created_at))
 
     jobs = query.all()
 
