@@ -47,3 +47,46 @@ def get_single_job(job_id: int, db: Session = Depends(get_db)):
         return {"error": "Job not found"}
 
     return job
+
+# Route to delete a job using its ID
+@router.delete("/jobs/{job_id}")
+def delete_job(job_id: int, db: Session = Depends(get_db)):
+
+    # Find job in database
+    job = db.query(Job).filter(Job.id == job_id).first()
+
+    # Return error if job does not exist
+    if not job:
+        return {"error": "Job not found"}
+
+    # Delete job
+    db.delete(job)
+    db.commit()
+
+    return {"message": "Job deleted successfully"}
+
+# Route to update an existing job
+@router.put("/jobs/{job_id}")
+def update_job(job_id: int, updated_job: JobCreate, db: Session = Depends(get_db)):
+
+    # Find existing job
+    job = db.query(Job).filter(Job.id == job_id).first()
+
+    if not job:
+        return {"error": "Job not found"}
+
+    # Update job fields
+    job.title = updated_job.title
+    job.company = updated_job.company
+    job.location = updated_job.location
+    job.salary = updated_job.salary
+    job.platform = updated_job.platform
+    job.job_url = updated_job.job_url
+    job.description = updated_job.description
+    job.skills = updated_job.skills
+
+    db.commit()
+
+    return {
+        "message": "Job updated successfully"
+    }
