@@ -9,6 +9,7 @@ class JobCreate(BaseModel):
     job_url: str
     description: str
     skills: str
+    status: str = "saved"
 
 class JobResponse(JobCreate):
     id: int

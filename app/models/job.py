@@ -14,5 +14,6 @@ class Job(Base):
     job_url = Column(String)
     description = Column(Text)
     skills = Column(String)
+    status = Column(String, default="saved")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

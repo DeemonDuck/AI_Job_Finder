@@ -19,7 +19,8 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
         platform=job.platform,
         job_url=job.job_url,
         description=job.description,
-        skills=job.skills
+        skills=job.skills,
+        status=job.status
     )
 
     db.add(new_job)
@@ -85,6 +86,7 @@ def update_job(job_id: int, updated_job: JobCreate, db: Session = Depends(get_db
     job.job_url = updated_job.job_url
     job.description = updated_job.description
     job.skills = updated_job.skills
+    job.status = updated_job.status
 
     db.commit()
     db.refresh(job)
