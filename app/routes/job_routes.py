@@ -7,7 +7,7 @@ from app.schemas.job_schema import JobCreate, JobResponse
 from app.services.job_service import get_all_jobs
 
 router = APIRouter(
-    prefix="/jobs",
+    prefix="/api/v1/jobs",
     tags=["Jobs"]
 )
 
