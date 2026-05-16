@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, desc
 
 from app.database import get_db
@@ -52,7 +52,7 @@ def get_jobs(
         skip=skip,
         limit=limit
     )
-    
+
     return jobs
 
 # Route to fetch a single job using its ID
@@ -62,7 +62,10 @@ def get_single_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(Job).filter(Job.id == job_id).first()
 
     if not job:
-        return {"error": "Job not found"}
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found"
+        )
 
     return job
 
@@ -74,7 +77,10 @@ def update_job(job_id: int, updated_job: JobCreate, db: Session = Depends(get_db
     job = db.query(Job).filter(Job.id == job_id).first()
 
     if not job:
-        return {"error": "Job not found"}
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found"
+        )
 
     job.title = updated_job.title
     job.company = updated_job.company
@@ -99,7 +105,10 @@ def delete_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(Job).filter(Job.id == job_id).first()
 
     if not job:
-        return {"error": "Job not found"}
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found"
+        )
 
     db.delete(job)
     db.commit()
