@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, desc
 from app.database import get_db
 from app.models.job import Job
 from app.schemas.job_schema import JobCreate, JobResponse
+from app.services.job_service import get_all_jobs
 
 router = APIRouter()
 
@@ -42,26 +43,16 @@ def get_jobs(
     db: Session = Depends(get_db)
 ):
 
-    query = db.query(Job)
-
-    # Filter by company
-    if company:
-        query = query.filter(Job.company.ilike(f"%{company}%"))
-
-    # Filter by location
-    if location:
-        query = query.filter(Job.location.ilike(f"%{location}%"))
-
-    # Filter by skill
-    if skill:
-        query = query.filter(Job.skills.ilike(f"%{skill}%"))
-
-    # Sort newest first
-    if sort_by == "created_at":
-        query = query.order_by(desc(Job.created_at))
-
-    jobs = query.offset(skip).limit(limit).all()
-
+    jobs = get_all_jobs(
+        db=db,
+        company=company,
+        location=location,
+        skill=skill,
+        sort_by=sort_by,
+        skip=skip,
+        limit=limit
+    )
+    
     return jobs
 
 # Route to fetch a single job using its ID
