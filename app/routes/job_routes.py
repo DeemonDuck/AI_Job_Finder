@@ -6,10 +6,13 @@ from app.models.job import Job
 from app.schemas.job_schema import JobCreate, JobResponse
 from app.services.job_service import get_all_jobs
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/jobs",
+    tags=["Jobs"]
+)
 
 # Route to create a new job
-@router.post("/jobs", response_model=JobResponse)
+@router.post("/", response_model=JobResponse)
 def create_job(job: JobCreate, db: Session = Depends(get_db)):
 
     new_job = Job(
@@ -32,7 +35,7 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
 
 
 # Route to fetch jobs with filters and sorting
-@router.get("/jobs", response_model=list[JobResponse])
+@router.get("/", response_model=list[JobResponse])
 def get_jobs(
     company: str = None,
     location: str = None,
@@ -56,7 +59,7 @@ def get_jobs(
     return jobs
 
 # Route to fetch a single job using its ID
-@router.get("/jobs/{job_id}", response_model=JobResponse)
+@router.get("/{job_id}", response_model=JobResponse)
 def get_single_job(job_id: int, db: Session = Depends(get_db)):
 
     job = db.query(Job).filter(Job.id == job_id).first()
@@ -71,7 +74,7 @@ def get_single_job(job_id: int, db: Session = Depends(get_db)):
 
 
 # Route to update an existing job
-@router.put("/jobs/{job_id}", response_model=JobResponse)
+@router.put("/{job_id}", response_model=JobResponse)
 def update_job(job_id: int, updated_job: JobCreate, db: Session = Depends(get_db)):
 
     job = db.query(Job).filter(Job.id == job_id).first()
@@ -99,7 +102,7 @@ def update_job(job_id: int, updated_job: JobCreate, db: Session = Depends(get_db
 
 
 # Route to delete a job using its ID
-@router.delete("/jobs/{job_id}")
+@router.delete("/{job_id}")
 def delete_job(job_id: int, db: Session = Depends(get_db)):
 
     job = db.query(Job).filter(Job.id == job_id).first()
