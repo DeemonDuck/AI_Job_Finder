@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.models.job import Job
 from app.routes.job_routes import router as job_router
+from app.models.preferences import UserPreferences
 
 Base.metadata.create_all(bind=engine)
 
