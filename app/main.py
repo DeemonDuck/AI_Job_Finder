@@ -4,6 +4,7 @@ from app.database import engine, Base
 from app.models.job import Job
 from app.routes.job_routes import router as job_router
 from app.models.preferences import UserPreferences
+from app.routes.preferences_routes import router as preferences_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -19,6 +20,7 @@ app.add_middleware(
 )
 
 app.include_router(job_router)
+app.include_router(preferences_router)
 
 @app.get("/")
 def home():
