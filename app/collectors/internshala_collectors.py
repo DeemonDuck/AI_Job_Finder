@@ -123,6 +123,14 @@ async def main():
             if title == "No Title":
                 continue
 
+            existing_job = db.query(Job).filter(
+                Job.job_url == job_url
+            ).first()
+            
+            if existing_job:
+                continue
+            
+            
             new_job = Job(
                 title=title,
                 company=company,
