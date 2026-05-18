@@ -4,7 +4,7 @@ from datetime import datetime
 
 class Job(Base):
     __tablename__ = "jobs"
-
+    
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
     company = Column(String, index=True)
@@ -17,3 +17,4 @@ class Job(Base):
     status = Column(String, default="saved")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    source = Column(String)

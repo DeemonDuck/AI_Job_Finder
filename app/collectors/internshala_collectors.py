@@ -1,6 +1,8 @@
 import asyncio
 from playwright.async_api import async_playwright
 
+from app.database import SessionLocal
+from app.models.job import Job
 
 async def main():
 
@@ -24,6 +26,9 @@ async def main():
         )
 
         print(f"Found {len(cards)} internship cards")
+
+        # Creating DB session:
+        db = SessionLocal()
 
         for card in cards[:5]:
 
@@ -61,12 +66,23 @@ async def main():
             if title == "No Title":
                 continue
 
+            new_job = Job(
+                title=title,
+                company=company,
+                location=location,
+                source="Internshala"
+            )
+
+            db.add(new_job)
+
             print("Title:", title)
             print("Company:", company)
             print("Location:", location)
 
             print("-" * 40)
 
+        db.commit()
+        db.close()
         await browser.close()
 
 asyncio.run(main())
