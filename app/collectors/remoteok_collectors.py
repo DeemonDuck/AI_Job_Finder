@@ -33,20 +33,18 @@ print("Scraping URL:", url)
 
 soup = BeautifulSoup(response.text, "html.parser")
 
+print(soup.prettify()[:5000])
+
+
 # Find job cards
-jobs = soup.find_all("tr", class_="job")
+jobs = soup.select("tr.job")
 
 print(f"Found {len(jobs)} jobs")
 
 
 # Print first 5 jobs
-for job in jobs[:5]:
+for job in jobs:
 
-    title = job.get("data-search")
-
-    company = job.get("data-company")
-
-    print("Job Title:", title)
-    print("Company:", company)
+    print(job.get("class"))
 
     print("-" * 40)
