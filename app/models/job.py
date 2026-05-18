@@ -18,3 +18,4 @@ class Job(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     source = Column(String)
+    posted_date = Column(String)

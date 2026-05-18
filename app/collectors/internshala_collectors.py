@@ -43,6 +43,26 @@ async def main():
             location_el = await card.query_selector(
                 ".row-1-item.locations"
             )
+            
+            salary_el = await card.query_selector(
+                ".stipend"
+            )
+
+            description_el = await card.query_selector(
+                ".text"
+            )
+
+            posted_el = await card.query_selector(
+                ".detail-row-2"
+            )
+
+            url_el = await card.query_selector(
+                ".job-title-href"
+            )
+
+            skills_elements = await card.query_selector_all(
+                ".job_skill"
+            )
 
             title = (
                 await title_el.inner_text()
@@ -62,6 +82,43 @@ async def main():
                 else "No Location"
             )
 
+            salary = (
+                await salary_el.inner_text()
+                if salary_el
+                else "Not Mentioned"
+            )
+            
+            description = (
+                await description_el.inner_text()
+                if description_el
+                else "No Description"
+            )
+
+            posted_date = (
+                await posted_el.inner_text()
+                if posted_el
+                else "Unknown"
+            )
+
+            job_url = ""
+
+            if url_el:
+            
+                href = await url_el.get_attribute("href")
+
+                if href:
+                    job_url = f"https://internshala.com{href}"
+
+            skills_list = []
+
+            for skill in skills_elements:
+            
+                skill_text = await skill.inner_text()
+
+                skills_list.append(skill_text)
+
+            skills = ", ".join(skills_list)
+
             # Skip invalid cards
             if title == "No Title":
                 continue
@@ -70,6 +127,11 @@ async def main():
                 title=title,
                 company=company,
                 location=location,
+                salary=salary,
+                skills=skills,
+                description=description,
+                job_url=job_url,
+                posted_date=posted_date,
                 source="Internshala"
             )
 
@@ -78,7 +140,11 @@ async def main():
             print("Title:", title)
             print("Company:", company)
             print("Location:", location)
-
+            print("Salary:", salary)
+            print("Skills:", skills)
+            print("Posted:", posted_date)
+            print("URL:", job_url)
+        
             print("-" * 40)
 
         db.commit()
