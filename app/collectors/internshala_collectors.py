@@ -1,6 +1,7 @@
 import asyncio
 from playwright.async_api import async_playwright
 from app.models.preferences import UserPreferences
+import random
 
 from app.database import SessionLocal
 from app.models.job import Job
@@ -23,6 +24,8 @@ async def main():
         
         if not preferences:
             print("No preferences found.")
+            db.close()
+            await browser.close()
             return
         
         # Generate dynamic Internshala URL
@@ -51,7 +54,9 @@ async def main():
             wait_until="domcontentloaded"
         )
         
-        await page.wait_for_timeout(5000)
+        delay = random.randint(4000, 7000)
+        print(f"Waiting {delay/1000} seconds...")
+        await page.wait_for_timeout(delay)
         
         cards = await page.query_selector_all(
             ".individual_internship"
@@ -82,7 +87,7 @@ async def main():
             )
 
             posted_el = await card.query_selector(
-                ".detail-row-2"
+                ".status-inactive span"
             )
 
             url_el = await card.query_selector(
