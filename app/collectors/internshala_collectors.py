@@ -1,5 +1,6 @@
 import asyncio
 from playwright.async_api import async_playwright
+from app.models.preferences import UserPreferences
 
 from app.database import SessionLocal
 from app.models.job import Job
@@ -14,22 +15,50 @@ async def main():
 
         page = await browser.new_page()
 
+        # Creating DB session
+        db = SessionLocal()
+        
+        # Fetch user preferences
+        preferences = db.query(UserPreferences).first()
+        
+        if not preferences:
+            print("No preferences found.")
+            return
+        
+        # Generate dynamic Internshala URL
+        role_slug = (
+            preferences.preferred_role
+            .lower()
+            .replace(" ", "-")
+        )
+        
+        location_slug = (
+            preferences.preferred_location
+            .lower()
+            .replace(" ", "-")
+        )
+        
+        url = (
+            f"https://internshala.com/internships/"
+            f"{location_slug}-{role_slug}-internships/"
+        )
+        
+        print("Generated URL:", url)
+        
+        # Open generated page
         await page.goto(
-            "https://internshala.com/internships/work-from-home-ai-ml-internships/",
+            url,
             wait_until="domcontentloaded"
         )
-
+        
         await page.wait_for_timeout(5000)
-
+        
         cards = await page.query_selector_all(
             ".individual_internship"
         )
-
+        
         print(f"Found {len(cards)} internship cards")
-
-        # Creating DB session:
-        db = SessionLocal()
-
+        
         for card in cards[:5]:
 
             title_el = await card.query_selector(
@@ -126,7 +155,7 @@ async def main():
             existing_job = db.query(Job).filter(
                 Job.job_url == job_url
             ).first()
-            
+
             if existing_job:
                 continue
             
