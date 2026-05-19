@@ -16,3 +16,5 @@ class UserPreferences(Base):
     job_type = Column(String)  # remote, hybrid, onsite
 
     salary_expectation = Column(String)
+    
+    max_job_age_days = Column(Integer, nullable=True)  # ADDED

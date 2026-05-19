@@ -6,6 +6,36 @@ import random
 from app.database import SessionLocal
 from app.models.job import Job
 
+#Freshness Filtering
+MAX_JOB_AGE_DAYS = (
+    preferences.max_job_age_days
+    if preferences.max_job_age_days
+    else 14
+)
+
+
+def convert_to_days(posted_text):
+
+    posted_text = posted_text.lower()
+
+    try:
+
+        number = int(posted_text.split()[0])
+
+        if "day" in posted_text:
+            return number
+
+        elif "week" in posted_text:
+            return number * 7
+
+        elif "month" in posted_text:
+            return number * 30
+
+    except:
+        return 999
+
+    return 999
+
 async def main():
 
     async with async_playwright() as pw:
@@ -133,6 +163,14 @@ async def main():
                 if posted_el
                 else "Unknown"
             )
+            job_age_days = convert_to_days(posted_date)
+            
+            # Freshness FIlter Inside Loop
+            if job_age_days > MAX_JOB_AGE_DAYS:
+                print(
+                    f"Skipping old job: {title} ({posted_date})"
+                )
+                continue
 
             job_url = ""
 
