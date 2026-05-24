@@ -102,7 +102,7 @@ async def main():
 
         print(f"Found {len(cards)} internship cards")
 
-        for card in cards[:5]:
+        for card in cards:
 
             title_el = await card.query_selector(
                 ".job-internship-name"
