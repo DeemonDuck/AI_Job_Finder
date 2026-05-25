@@ -100,6 +100,28 @@ async def main():
             ".individual_internship"
         )
 
+        #Temporarily adding to check if Auto Scroll is needed or not?
+        print(
+            "Initial cards loaded:",
+            len(cards)
+        )
+
+        await page.evaluate(
+            "window.scrollTo(0, document.body.scrollHeight)"
+        )
+
+        await page.wait_for_timeout(3000)
+
+        cards_after_scroll = await page.query_selector_all(
+            ".individual_internship"
+        )
+
+        print(
+            "Cards after scroll:",
+            len(cards_after_scroll)
+        )
+        # Till here Temp Code
+        
         print(f"Found {len(cards)} internship cards")
 
         for card in cards:
