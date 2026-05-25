@@ -96,32 +96,81 @@ async def main():
 
         await page.wait_for_timeout(delay)
 
+        #Experimenting with extracted jobs = jobs shown on portal at time of search
+
+        # Extract expected internship count
+        count_el = await page.query_selector(
+            ".internship_seo_heading_container h1"
+        )
+
+        expected_count = "Unknown"
+
+        if count_el:
+        
+            heading_text = await count_el.inner_text()
+
+            print(f"Heading Text: {heading_text}")
+
+            try:
+            
+                expected_count = int(
+                    heading_text.split()[0]
+                )
+
+            except Exception as e:
+            
+                print(
+                    f"[COUNT PARSE ERROR] {e}"
+                )
+
+
+        # Human-like gradual auto scrolling
+
+        previous_count = 0
+    
+        while True:
+    
+            cards = await page.query_selector_all(
+                ".individual_internship"
+            )
+
+            current_count = len(cards)
+
+            print(
+                f"Currently loaded cards: "
+                f"{current_count}"
+            )
+
+            # Stop if no new cards appear
+            if current_count == previous_count:
+            
+                print("No new cards loaded.")
+
+                break
+            
+            previous_count = current_count
+
+            # Gradual scrolling
+            await page.mouse.wheel(0, 2500)
+
+            # Wait for lazy loading
+            await page.wait_for_timeout(2500)
+
+        # Final extraction count
+        print(
+            f"\nExpected internships: "
+            f"{expected_count}"
+        )
+
+        print(
+            f"Collected internship cards: "
+            f"{len(cards)}"
+        )
+
         cards = await page.query_selector_all(
             ".individual_internship"
         )
 
-        #Temporarily adding to check if Auto Scroll is needed or not?
-        print(
-            "Initial cards loaded:",
-            len(cards)
-        )
-
-        await page.evaluate(
-            "window.scrollTo(0, document.body.scrollHeight)"
-        )
-
-        await page.wait_for_timeout(3000)
-
-        cards_after_scroll = await page.query_selector_all(
-            ".individual_internship"
-        )
-
-        print(
-            "Cards after scroll:",
-            len(cards_after_scroll)
-        )
-        # Till here Temp Code
-        
         print(f"Found {len(cards)} internship cards")
 
         for card in cards:
