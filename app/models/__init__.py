@@ -1,0 +1,1 @@
+from app.models.internshala_category import InternshalaCategory
