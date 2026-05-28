@@ -3,6 +3,10 @@ from playwright.async_api import async_playwright
 from app.models.preferences import UserPreferences
 import random
 
+from app.collectors.test_dynamic_navigation import (
+    navigate_to_category
+)
+
 from app.database import SessionLocal
 from app.models.job import Job
 
@@ -60,10 +64,16 @@ async def main():
     async with async_playwright() as pw:
 
         browser = await pw.chromium.launch(
+            channel="msedge",
             headless=False
         )
 
-        page = await browser.new_page()
+        page = await browser.new_page(
+            viewport={
+                "width": 1600,
+                "height": 900
+            }
+        )
 
         # Database session
         db = SessionLocal()
@@ -89,27 +99,36 @@ async def main():
             if preferences.max_job_age_days
             else 14
         )
+        
+        # # Hardcoded Internshala Url
+        # # Base Internshala URL
+        # base_url = (
+        #     "https://internshala.com/internships/"
+        #     "artificial-intelligence-ai,"
+        #     "machine-learning-internship"
+        # )
 
-        # Base Internshala URL
-        base_url = (
-            "https://internshala.com/internships/"
-            "artificial-intelligence-ai,"
-            "machine-learning-internship"
+        # # Open first page
+        # await page.goto(
+        #     base_url,
+        #     wait_until="domcontentloaded"
+        # )
+
+        # delay = random.randint(4000, 7000)
+
+        # print(
+        #     f"Waiting {delay/1000} seconds..."
+        # )
+
+        # await page.wait_for_timeout(delay)
+
+        ##Testing Dynamic Navigation Integration with the Extraction Logic
+        
+        base_url = await navigate_to_category(
+            page,
+            "Machine Learning"
         )
-
-        # Open first page
-        await page.goto(
-            base_url,
-            wait_until="domcontentloaded"
-        )
-
-        delay = random.randint(4000, 7000)
-
-        print(
-            f"Waiting {delay/1000} seconds..."
-        )
-
-        await page.wait_for_timeout(delay)
+        # Testing code ends here
 
         # Extract expected internship count
         count_el = await page.query_selector(
@@ -206,6 +225,7 @@ async def main():
             # Human-like delay
             await page.wait_for_timeout(5000)
 
+            
             # Initial extraction
             cards = await page.query_selector_all(
                 ".individual_internship"

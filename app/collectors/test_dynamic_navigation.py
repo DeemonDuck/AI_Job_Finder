@@ -5,80 +5,71 @@ from playwright.async_api import (
 )
 
 
-async def main():
+async def navigate_to_category(
+    page,
+    category_name
+):
 
-    async with async_playwright() as pw:
+    # Open Internshala internships page
+    await page.goto(
+        "https://internshala.com/internships/",
+        wait_until="domcontentloaded"
+    )
 
-        browser = await pw.chromium.launch(
-            channel="msedge",
-            headless=False
-        )
-        #Forcing it to open using only Desktop Viewport
-        page = await browser.new_page(
-            viewport={
-                "width": 1600,
-                "height": 900
-            }
-        )
-        # Open Internshala homepage
-        await page.goto(
-            "https://internshala.com/internships/",
-            wait_until="domcontentloaded"
-        )
+    print("Opened Internshala")
 
-        print("Opened Internshala")
-        
-        try:
-                
-            await page.click(
-                "#close_popup",
-                timeout=10000
-            )
-
-            print("Popup closed")
-
-        except Exception:
-        
-            print("Popup did not appear")
-
-        # Wait for page load
-        await page.wait_for_timeout(5000)
-
-        await page.wait_for_selector(
-            ".chosen-search-input"
-        )
-
-        print("Search input found")
+    # Handle popup safely
+    try:
 
         await page.click(
-            ".chosen-search-input"
+            "#close_popup",
+            timeout=10000
         )
 
-        print("Clicked search input")
+        print("Popup closed")
 
-        await page.keyboard.type(
-            "Machine Learning",
-            delay=150
-        )
+    except Exception:
 
-        await page.keyboard.press("Enter")
+        print("Popup did not appear")
 
-        print("Pressed Enter")
+    # Wait before interaction
+    await page.wait_for_timeout(5000)
 
-        print("Typed category")
-        # Till here Debugging
+    # Wait for search input
+    await page.wait_for_selector(
+        ".chosen-search-input"
+    )
 
-        # Wait for dropdown suggestions
-        await page.wait_for_timeout(3000)
+    print("Search input found")
 
-        print(
-            "Check manually if dropdown appeared"
-        )
+    # Click search input
+    await page.click(
+        ".chosen-search-input"
+    )
 
-        # Keep browser open temporarily
-        await page.wait_for_timeout(5000)
+    print("Clicked search input")
 
-        await browser.close()
+    # Type category
+    await page.keyboard.type(
+        category_name,
+        delay=150
+    )
 
+    print("Typed category")
 
-asyncio.run(main())
+    # Press Enter
+    await page.keyboard.press("Enter")
+
+    print("Pressed Enter")
+
+    # Wait for internships page to load
+    await page.wait_for_timeout(5000)
+
+    base_url = page.url
+
+    print(
+        f"Dynamic Base URL: "
+        f"{base_url}"
+    )
+
+    return base_url
