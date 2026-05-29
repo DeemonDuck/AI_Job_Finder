@@ -124,9 +124,11 @@ async def main():
 
         ##Testing Dynamic Navigation Integration with the Extraction Logic
         
+        category_name="Machine Learning"
+
         base_url = await navigate_to_category(
             page,
-            "Machine Learning"
+            "category_name"
         )
         # Testing code ends here
 
@@ -421,6 +423,7 @@ async def main():
                     location=location,
                     salary=salary,
                     skills=skills,
+                    search_category=category_name,
                     description=description,
                     job_url=job_url,
                     posted_date=posted_date,
