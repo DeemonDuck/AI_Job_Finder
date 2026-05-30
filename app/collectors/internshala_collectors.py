@@ -99,28 +99,6 @@ async def main():
             if preferences.max_job_age_days
             else 14
         )
-        
-        # # Hardcoded Internshala Url
-        # # Base Internshala URL
-        # base_url = (
-        #     "https://internshala.com/internships/"
-        #     "artificial-intelligence-ai,"
-        #     "machine-learning-internship"
-        # )
-
-        # # Open first page
-        # await page.goto(
-        #     base_url,
-        #     wait_until="domcontentloaded"
-        # )
-
-        # delay = random.randint(4000, 7000)
-
-        # print(
-        #     f"Waiting {delay/1000} seconds..."
-        # )
-
-        # await page.wait_for_timeout(delay)
 
         ##Testing Dynamic Navigation Integration with the Extraction Logic
         
@@ -128,7 +106,7 @@ async def main():
 
         base_url = await navigate_to_category(
             page,
-            "category_name"
+            category_name
         )
         # Testing code ends here
 

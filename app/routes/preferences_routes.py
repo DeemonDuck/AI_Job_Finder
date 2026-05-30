@@ -27,7 +27,8 @@ def create_preferences(
         preferred_skills=preferences.preferred_skills,
         experience_level=preferences.experience_level,
         job_type=preferences.job_type,
-        salary_expectation=preferences.salary_expectation
+        salary_expectation=preferences.salary_expectation,
+        max_job_age_days=preferences.max_job_age_days
     )
 
     db.add(new_preferences)
