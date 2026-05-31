@@ -102,7 +102,7 @@ async def main():
 
         ##Testing Dynamic Navigation Integration with the Extraction Logic
         
-        category_name="Machine Learning"
+        category_name="Artificial Intelligence (AI)"
 
         base_url = await navigate_to_category(
             page,
@@ -410,16 +410,17 @@ async def main():
 
                 db.add(new_job)
 
-                # Logging
-                print("Title:", title)
-                print("Company:", company)
-                print("Location:", location)
-                print("Salary:", salary)
-                print("Skills:", skills)
-                print("Posted:", posted_date)
-                print("URL:", job_url)
+                # # Logging
+                # #Currently testing disabling Prinitning every info of job
+                # print("Title:", title)
+                # print("Company:", company)
+                # print("Location:", location)
+                # print("Salary:", salary)
+                # print("Skills:", skills)
+                # print("Posted:", posted_date)
+                # print("URL:", job_url)
 
-                print("-" * 40)
+                # print("-" * 40)
 
         print(db.query(Job).count())
 
