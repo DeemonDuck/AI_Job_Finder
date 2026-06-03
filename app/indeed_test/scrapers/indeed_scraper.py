@@ -46,7 +46,7 @@ from config.settings import (
     HEADLESS, BROWSER_TIMEOUT_MS, USER_AGENT,
     REQUEST_DELAY_MIN, REQUEST_DELAY_MAX,
     MAX_CONCURRENT_DETAIL_FETCHES, MAX_FRESHNESS_DAYS,
-    MAX_PAGES_PER_QUERY, SOURCE_NAME
+    MAX_PAGES_PER_QUERY, SOURCE_NAME, INDEED_BASE_URL
 )
 from models.job_posting import JobPosting
 from utils.date_parser import is_within_freshness_window
@@ -67,9 +67,9 @@ SELECTORS = {
     "card_title":    "h2.jobTitle span[title]",
     "card_company":  "span.companyName",
     "card_location": "div.companyLocation",
-    "card_date":     "span.date",               # e.g. "3 days ago"
+    "card_date":     "span.date",
     "card_salary":   "div.metadata.salary-snippet-container span",
-    "card_link":     "h2.jobTitle a",           # href contains the job URL + jk param
+    "card_link":     "h2.jobTitle a",
 
     # Fields on the job detail page
     "detail_description":      "div#jobDescriptionText",
@@ -79,6 +79,27 @@ SELECTORS = {
     # "No results" indicator — used to stop pagination early
     "no_results": "div.jobsearch-NoResult-messageContainer",
 }
+
+# Phrases that indicate a bot/captcha/verification page
+BLOCK_PHRASES = [
+    "just a moment",
+    "access denied",
+    "captcha",
+    "verify",
+    "additional verification",
+    "blocked",
+]
+
+# Fallback selector chain — tried in order when the primary selector fails.
+# Indeed renames CSS classes after redesigns. data-testid is most stable
+# because Indeed uses it in their own test suite and rarely removes it.
+CARD_SELECTOR_FALLBACKS = [
+    "div.job_seen_beacon",
+    "div[class*='job_seen_beacon']",
+    "li.css-1ac2h1w",
+    "div[data-testid='slider_item']",
+    "div.resultContent",
+]
 
 
 async def _random_delay():
@@ -95,7 +116,7 @@ async def _setup_browser(playwright) -> Browser:
         headless=HEADLESS,
         args=[
             "--no-sandbox",
-            "--disable-blink-features=AutomationControlled",  # Key stealth arg
+            "--disable-blink-features=AutomationControlled",
             "--disable-dev-shm-usage",
         ]
     )
@@ -124,6 +145,44 @@ async def _new_stealth_page(browser: Browser) -> Page:
     return page
 
 
+async def _handle_verification(page: Page) -> bool:
+    """
+    Check if the current page is a bot/captcha/verification page.
+    If yes, pause and wait for the human to solve it.
+
+    Returns:
+        True  → page is clean, scraper can continue
+        False → still blocked after human attempted to solve it
+    """
+    title = await page.title()
+    logger.info("Page title: %r", title)
+
+    if not any(phrase in title.lower() for phrase in BLOCK_PHRASES):
+        return True  # No verification needed, all good
+
+    # Verification detected — prompt the human
+    print("\n" + "=" * 55)
+    print("  HUMAN VERIFICATION REQUIRED")
+    print("  Please solve the verification in the browser window.")
+    print("  Once the jobs page loads normally, come back here")
+    print("  and press Enter to continue...")
+    print("=" * 55 + "\n")
+
+    # run_in_executor prevents input() from blocking the async event loop
+    await asyncio.get_event_loop().run_in_executor(
+        None, input, "  >>> Press Enter when done: "
+    )
+
+    # Re-check title after human solved it
+    title = await page.title()
+    if any(phrase in title.lower() for phrase in BLOCK_PHRASES):
+        logger.error("Verification still not solved. Skipping this page.")
+        return False
+
+    logger.info("Verification solved! Resuming scraper...")
+    return True
+
+
 async def _parse_listing_page(page: Page, url: str) -> tuple[list[dict], bool]:
     """
     Navigate to a search results page and extract job cards.
@@ -139,38 +198,39 @@ async def _parse_listing_page(page: Page, url: str) -> tuple[list[dict], bool]:
     logger.info("Fetching listing page: %s", url)
 
     try:
-        await page.goto(url, wait_until="networkidle")
-        
-        title = await page.title()
-        logger.info("Page title: %s", title)
-
-        if any(x in title.lower() for x in [
-            "just a moment",
-            "access denied",
-            "captcha",
-            "verify"
-        ]):
-            logger.error(
-                "Bot protection page detected: %s",
-                title
-            )
-            return [], False
-
-        await _random_delay()
+        await page.goto(url, wait_until="networkidle", timeout=BROWSER_TIMEOUT_MS)
     except PWTimeout:
         logger.error("Timeout loading listing page: %s", url)
         return [], False
+
+    # Handle bot detection — pauses for human if needed
+    page_clean = await _handle_verification(page)
+    if not page_clean:
+        return [], False
+
+    await _random_delay()
 
     # Check for "no results" before doing any work
     if await page.query_selector(SELECTORS["no_results"]):
         logger.info("No results found on this page — stopping pagination")
         return [], False
 
+    # ── Fallback selector chain ───────────────────────────────────────
+    # Try each selector in order until one finds cards.
+    # When Indeed renames classes, we automatically fall through to the next.
     cards_raw = []
-    card_elements = await page.query_selector_all(SELECTORS["job_card"])
+    card_elements = []
+
+    for selector in CARD_SELECTOR_FALLBACKS:
+        card_elements = await page.query_selector_all(selector)
+        if card_elements:
+            logger.info("Found %d cards using selector: %r", len(card_elements), selector)
+            break
 
     if not card_elements:
-        logger.warning("No job cards found — selector may be stale: %r", SELECTORS["job_card"])
+        html_snippet = await page.content()
+        logger.warning("No job cards found. Tried all fallback selectors.")
+        logger.debug("First 2000 chars of HTML:\n%s", html_snippet[:2000])
         return [], False
 
     should_continue = True
@@ -209,7 +269,6 @@ async def _parse_listing_page(page: Page, url: str) -> tuple[list[dict], bool]:
             salary  = await salary_el.inner_text() if salary_el else None
             href    = await link_el.get_attribute("href") if link_el else ""
 
-            from config.settings import INDEED_BASE_URL
             full_url = href if href.startswith("http") else f"{INDEED_BASE_URL}{href}"
             job_id   = extract_job_id_from_url(full_url)
 
@@ -275,7 +334,6 @@ async def _fetch_all_details(browser: Browser, cards: list[dict]) -> list[JobPos
     When one finishes, the next one enters.
     """
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_DETAIL_FETCHES)
-    results: list[JobPosting] = []
 
     async def fetch_one(card_data: dict) -> JobPosting:
         async with semaphore:
@@ -285,7 +343,6 @@ async def _fetch_all_details(browser: Browser, cards: list[dict]) -> list[JobPos
             finally:
                 await page.context.close()
 
-            # Merge card data + detail data into a JobPosting
             salary = detail["salary_detail"] or card_data.get("salary")
 
             return JobPosting(
@@ -302,11 +359,9 @@ async def _fetch_all_details(browser: Browser, cards: list[dict]) -> list[JobPos
                 employment_type  = detail["employment_type"],
             )
 
-    # Run all fetch tasks concurrently (limited by semaphore)
     tasks = [fetch_one(card) for card in cards]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    # Filter out any exceptions that slipped through
     clean_results = []
     for r in results:
         if isinstance(r, Exception):
@@ -354,7 +409,6 @@ async def scrape_query(query: str, location: str, browser: Browser) -> list[JobP
     if not all_cards:
         return []
 
-    # Now fetch full descriptions
     job_postings = await _fetch_all_details(browser, all_cards)
     return job_postings
 
@@ -377,12 +431,11 @@ async def run_scraper(queries: list[str], location: str) -> list[JobPosting]:
                 all_jobs.extend(jobs)
                 logger.info("Collected %d jobs for %r", len(jobs), query)
 
-                # Polite pause between queries
                 await asyncio.sleep(random.uniform(3, 6))
         finally:
             await browser.close()
 
-    # Final dedup across all queries (same job can appear for multiple search terms)
+    # Final dedup across all queries
     seen = set()
     unique_jobs = []
     for job in all_jobs:

@@ -1,4 +1,26 @@
-venv/
+# Debug files
+debug_output/
+debug_*.html
+
+# Screenshots
+screenshots/
+*.png
+
+# Playwright artifacts
+playwright-report/
+test-results/
+
+# Logs
+logs/
+*.log
+
+# Python cache
 __pycache__/
 *.pyc
+
+# Environment files
+venv/
 .env
+
+# Database files
+jobs.db

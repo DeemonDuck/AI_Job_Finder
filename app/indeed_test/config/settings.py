@@ -22,14 +22,14 @@ JOBS_PER_PAGE = 10                 # Indeed default
 # --- Concurrency & rate limits ---
 # "How many detail pages to fetch at once?"
 # Keep this ≤ 3 to avoid triggering Indeed's anti-bot measures.
-MAX_CONCURRENT_DETAIL_FETCHES = 3
+MAX_CONCURRENT_DETAIL_FETCHES = 2
 
 # Wait range between requests (seconds) — random jitter avoids pattern detection
 REQUEST_DELAY_MIN = 1.5
 REQUEST_DELAY_MAX = 4.0
 
 # --- Playwright browser settings ---
-HEADLESS = True                    # Set False to watch the browser while debugging
+HEADLESS = False                    # Set False to watch the browser while debugging
 BROWSER_TIMEOUT_MS = 30_000        # 30 seconds per page load
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
