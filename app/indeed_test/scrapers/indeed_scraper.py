@@ -185,15 +185,15 @@ async def _handle_verification(page: Page) -> bool:
 
 async def _parse_listing_page(page: Page, url: str) -> tuple[list[dict], bool]:
     """
-    Navigate to a search results page and extract job cards.
+    Navigate to a search results page and extract job cards directly from
+    Indeed's embedded JSON blob (window.mosaic.providerData).
+
+    This avoids all CSS selector fragility for listing-page data — the JSON
+    blob contains formattedRelativeTime, title, company, location, salary,
+    jobkey, and link for every card on the page.
 
     Returns:
         (cards: list of raw card dicts, should_continue: bool)
-
-    The should_continue flag is False when:
-        - We find a job older than MAX_FRESHNESS_DAYS on this page
-        - There are no results on this page
-    Both cases mean we should stop paginating.
     """
     logger.info("Fetching listing page: %s", url)
 
@@ -203,74 +203,55 @@ async def _parse_listing_page(page: Page, url: str) -> tuple[list[dict], bool]:
         logger.error("Timeout loading listing page: %s", url)
         return [], False
 
-    # Handle bot detection — pauses for human if needed
     page_clean = await _handle_verification(page)
     if not page_clean:
         return [], False
 
     await _random_delay()
 
-    # Check for "no results" before doing any work
     if await page.query_selector(SELECTORS["no_results"]):
         logger.info("No results found on this page — stopping pagination")
         return [], False
 
-    # ── Fallback selector chain ───────────────────────────────────────
-    # Try each selector in order until one finds cards.
-    # When Indeed renames classes, we automatically fall through to the next.
-    cards_raw = []
-    card_elements = []
+    # ── Pull job data directly from Indeed's embedded JSON ────────────
+    results = await page.evaluate("""
+        () => {
+            try {
+                const data = window.mosaic.providerData["mosaic-provider-jobcards"];
+                return data.metaData.mosaicProviderJobCardsModel.results;
+            } catch(e) {
+                return null;
+            }
+        }
+    """)
 
-    for selector in CARD_SELECTOR_FALLBACKS:
-        card_elements = await page.query_selector_all(selector)
-        if card_elements:
-            logger.info("Found %d cards using selector: %r", len(card_elements), selector)
-            break
-
-    if not card_elements:
-        html_snippet = await page.content()
-        logger.warning("No job cards found. Tried all fallback selectors.")
-        logger.debug("First 2000 chars of HTML:\n%s", html_snippet[:2000])
+    if not results:
+        logger.warning("Could not extract JSON blob from page — mosaic data unavailable")
         return [], False
 
+    logger.info("Found %d cards in JSON blob", len(results))
+
+    cards_raw = []
     should_continue = True
 
-    for card_el in card_elements:
+    for job in results:
         try:
-            # --- Extract date first (cheapest check) ---
-            date_el = await card_el.query_selector(SELECTORS["card_date"])
-            date_raw = (await date_el.inner_text()).strip() if date_el else ""
-
+            date_raw = job.get("formattedRelativeTime", "")
             is_fresh, days_ago = is_within_freshness_window(date_raw, MAX_FRESHNESS_DAYS)
 
-            # ── KEY EARLY EXIT ────────────────────────────────────────────
-            # Once we see a job older than our window, Indeed's results are
-            # sorted newest-first, so ALL subsequent jobs will be older too.
-            # Stop processing this page AND don't fetch the next page.
             if not is_fresh:
-                logger.info(
-                    "Found job with age %r (%s days) — stopping pagination",
-                    date_raw, days_ago
-                )
+                logger.info("Found job with age %r (%s days) — stopping pagination", date_raw, days_ago)
                 should_continue = False
                 break
-            # ─────────────────────────────────────────────────────────────
 
-            # Extract remaining card fields
-            title_el   = await card_el.query_selector(SELECTORS["card_title"])
-            company_el = await card_el.query_selector(SELECTORS["card_company"])
-            loc_el     = await card_el.query_selector(SELECTORS["card_location"])
-            salary_el  = await card_el.query_selector(SELECTORS["card_salary"])
-            link_el    = await card_el.query_selector(SELECTORS["card_link"])
-
-            title   = (await title_el.get_attribute("title") or await title_el.inner_text()) if title_el else ""
-            company = await company_el.inner_text() if company_el else ""
-            loc     = await loc_el.inner_text() if loc_el else ""
-            salary  = await salary_el.inner_text() if salary_el else None
-            href    = await link_el.get_attribute("href") if link_el else ""
+            job_id  = job.get("jobkey", "")
+            title   = job.get("displayTitle") or job.get("title", "")
+            company = job.get("company", "")
+            loc     = job.get("formattedLocation", "")
+            href    = job.get("link", "")
+            salary  = job.get("salarySnippet", {}).get("text") or None
 
             full_url = href if href.startswith("http") else f"{INDEED_BASE_URL}{href}"
-            job_id   = extract_job_id_from_url(full_url)
 
             cards_raw.append({
                 "job_id":          job_id,
@@ -278,13 +259,13 @@ async def _parse_listing_page(page: Page, url: str) -> tuple[list[dict], bool]:
                 "company":         company.strip(),
                 "location":        loc.strip(),
                 "job_url":         full_url,
-                "salary":          salary.strip() if salary else None,
+                "salary":          salary,
                 "posted_date_raw": date_raw,
                 "posted_days_ago": days_ago,
             })
 
         except Exception as e:
-            logger.warning("Error parsing card: %s", e)
+            logger.warning("Error parsing card from JSON: %s", e)
             continue
 
     return cards_raw, should_continue
